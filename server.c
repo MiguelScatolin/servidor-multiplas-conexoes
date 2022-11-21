@@ -9,22 +9,31 @@ int equipmentPorts[NUMERO_MAX_CONEXOES] = {0};
 int currentConnections = 0;
 int clientSocket, serverSocket;
 
+int indexToId(int index) {
+  
+}
+
+int idToIndex(int id) {
+  return id - 1;
+}
+
 void terminateConnection() {
   close(clientSocket);
   exit(EXIT_SUCCESS);
 }
 
-void installEquipment(cmd comando) {
+void installEquipment(message message) {
   if(currentConnections >= NUMERO_MAX_CONEXOES) {
     char errorMessage[50];
     sprintf(errorMessage, "%02d %02d", ERROR, EQUIPMENT_LIMIT_EXCEEDED);
     sendMessage(errorMessage, errorMessage);
+    return;
   }
 
   int newEquipmentId;
   for(int i = 0; i < NUMERO_MAX_CONEXOES; i++) {
     if(equipmentPorts[i] == 0) {
-      equipmentPorts[i] = comando.sourceSocket;
+      equipmentPorts[i] = message.sourceSocket;
       newEquipmentId = i + 1;
       break;
     }
@@ -45,47 +54,44 @@ void installEquipment(cmd comando) {
   sendMessage(clientSocket, equipmentListMessage);
 }
 
-void runcmd(cmd comando)
+void removeEquipment(message message) {
+  if(equipmentPorts[idToIndex(message.sourceId)] == 0) {
+    char errorMessage[50];
+    sprintf(errorMessage, "%02d %02d", ERROR, EQUIPMENT_NOT_FOUND);
+    sendMessage(errorMessage, errorMessage);
+    return;
+  }
+
+  //validacao
+  currentConnections--;
+  equipmentPorts[idToIndex(message.sourceId)] = 0;
+
+  char okMessage[50];
+  sprintf(okMessage, "%02d %02d %02d", OK, message.sourceId, 1);
+  sendMessage(clientSocket, okMessage);
+
+  printf("Equipment %02d removed\n", message.sourceId);
+
+  //fechar conexao
+}
+
+void runcmd(message message)
 {
-  switch (comando.type) 
+  switch (message.type) 
   {
     case REQ_ADD:
-      installEquipment(comando);
+      installEquipment(message);
+      break;
+    case REQ_RM:
+      removeEquipment(message);
       break;
     
     default:
-      logexit("tipo de comando desconhecido");
+      logexit("tipo de mensagem desconhecido");
   }
 }
 
-struct sockaddr_storage initializeServerSocket(char *ipVersion, char *portString) {
-  if(portString == NULL)
-    logexit("port nulo");
-
-  uint16_t port = (uint16_t)atoi(portString);
-  if(port == 0)
-    logexit("port invalida");
-  port = htons(port); //host to network short
-
-  struct sockaddr_storage storage;
-  if (strcmp(ipVersion, "v4") == 0) {
-    struct sockaddr_in *addr4 = (struct sockaddr_in *)(&storage);
-    addr4->sin_family = AF_INET;
-    addr4->sin_addr.s_addr = INADDR_ANY;
-    addr4->sin_port = port;
-    return storage;
-  } else if(strcmp(ipVersion, "v6") == 0) {
-    struct sockaddr_in6 *addr6 = (struct sockaddr_in6 *)(&storage);
-    addr6->sin6_family = AF_INET6;
-    addr6->sin6_addr = in6addr_any;
-    addr6->sin6_port = port;
-    return storage;
-  } else
-    logexit("nao foi possivel conectar"); 
-}
-
-int server_sockaddr_init(const char *proto, const char *portstr,
-                         struct sockaddr_storage *storage) {
+int server_sockaddr_init(const char *portstr, struct sockaddr_storage *storage) {
     uint16_t port = (uint16_t)atoi(portstr); // unsigned short
     if (port == 0) {
         return -1;
@@ -93,26 +99,16 @@ int server_sockaddr_init(const char *proto, const char *portstr,
     port = htons(port); // host to network short
 
     memset(storage, 0, sizeof(*storage));
-    if (0 == strcmp(proto, "v4")) {
-        struct sockaddr_in *addr4 = (struct sockaddr_in *)storage;
-        addr4->sin_family = AF_INET;
-        addr4->sin_addr.s_addr = INADDR_ANY;
-        addr4->sin_port = port;
-        return 0;
-    } else if (0 == strcmp(proto, "v6")) {
-        struct sockaddr_in6 *addr6 = (struct sockaddr_in6 *)storage;
-        addr6->sin6_family = AF_INET6;
-        addr6->sin6_addr = in6addr_any;
-        addr6->sin6_port = port;
-        return 0;
-    } else {
-        return -1;
-    }
+    struct sockaddr_in *addr4 = (struct sockaddr_in *)storage;
+    addr4->sin_family = AF_INET;
+    addr4->sin_addr.s_addr = INADDR_ANY;
+    addr4->sin_port = port;
+    return 0;
 }
 
-int connectToClient(char *ipVersion, char *portString) {
+int connectToClient(char *portString) {
   struct sockaddr_storage storage;
-  if (0 != server_sockaddr_init(ipVersion, portString, &storage))
+  if (0 != server_sockaddr_init(portString, &storage))
     logexit("falha ao conectar");
 
   serverSocket = socket(storage.ss_family, SOCK_STREAM, 0);
@@ -136,7 +132,6 @@ int connectToClient(char *ipVersion, char *portString) {
 
   char adressString[BUFSZ];
   addrtostr(addr, adressString, BUFSZ);
-  //printf("bound to %s, waiting connections\n", adressString);
 
   struct sockaddr_storage clientStorage;
   struct sockaddr *clientAddress = (struct sockaddr *)(&clientAddress);
@@ -162,8 +157,8 @@ int main(int argc, char *argv[]) {
   char buf[BUFSZ];
 	memset(buf, 0, BUFSZ);
   while(1) {
-    recv(clientSocket, buf, BUFSZ - 1, 0);
-    runcmd(parsecmd(buf, clientSocket));
+    receiveMessage(clientSocket, buf);
+    runcmd(parseMessage(buf, clientSocket));
   }
 
   terminateConnection();

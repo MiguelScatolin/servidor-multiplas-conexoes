@@ -119,9 +119,9 @@ int convertToInt(char *string) {
   return value;
 }
 
-cmd parsecmd(char s[BUFSZ], int socket)
+message parseMessage(char s[BUFSZ], int socket)
 {
-  cmd comando;
+  message comando;
 
   int value;
   char *val = strtok(s, " ");
@@ -134,9 +134,12 @@ cmd parsecmd(char s[BUFSZ], int socket)
   {
     case REQ_ADD:
       break;
+
     case RES_ADD:
+      val = strtok(NULL, " ");
       comando.payload[0] = convertToInt(val);
       break;
+
     case RES_LIST:
       int payloadIndex = 0;
       for(int i = 0; i < NUMERO_MAX_CONEXOES; i++) {
@@ -147,6 +150,25 @@ cmd parsecmd(char s[BUFSZ], int socket)
         comando.payload[payloadIndex] = convertToInt(val);
         payloadIndex++;
       }
+      break;
+
+    case REQ_RM:
+      val = strtok(NULL, " ");
+      if(val == NULL)
+          logexit("missing idEQ i");
+      comando.sourceId = convertToInt(val);
+      break;
+
+    case OK:
+      val = strtok(NULL, " ");
+      if(val == NULL)
+          logexit("missing idEQ j");
+      comando.destinationId = convertToInt(val);
+
+      val = strtok(NULL, " ");
+      if(val == NULL)
+          logexit("missing code");
+      comando.payload[0] = convertToInt(val);
       break;
 
     default:

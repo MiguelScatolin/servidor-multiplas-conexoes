@@ -30,13 +30,13 @@ typedef enum {
   EQUIPMENT_LIMIT_EXCEEDED
 } codigo_erro;
 
-typedef struct cmd {
+typedef struct message {
   tipo type;
   int sourceId;
   int destinationId;
   int sourceSocket;
   int payload[NUMERO_MAX_CONEXOES];
-} cmd;
+} message;
 
 void sendMessage(int s, char *message);
 void receiveMessage(int s, char *buf);
@@ -46,4 +46,4 @@ struct sockaddr_storage parseAddress(char *ipAdress, char *port);
 void logexit(char *errorMessage);
 bool stringEqual(char *s1, char *s2);
 int convertToInt(char *string);
-cmd parsecmd(char s[BUFSZ], int socket);
+message parseMessage(char s[BUFSZ], int socket);
