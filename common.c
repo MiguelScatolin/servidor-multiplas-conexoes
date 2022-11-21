@@ -11,15 +11,15 @@ void logexit(char *errorMessage) {
 }
 
 void sendMessage(int s, char *message) {
+  printf("message sent: %s\n", message);
   size_t count = send(s, message, strlen(message)+1, 0);
 	if (count != strlen(message)+1)
 		logexit("send");
 }
 
-char *receiveMessage(int s) {
-  char buf[BUFSZ];
-  recv(s, buf, BUFSZ, 0);
-  return buf;
+void receiveMessage(int s, char *buf) {
+  recv(s, buf, BUFSZ - 1, 0);
+  printf("message received: %s\n", buf);
 }
 
 char *addressToString(const struct sockaddr *address) {
@@ -110,6 +110,50 @@ void addrtostr(const struct sockaddr *addr, char *str, size_t strsize) {
     if (str) {
         snprintf(str, strsize, "IPv%d %s %hu", version, addrstr, port);
     }
+}
+
+int convertToInt(char *string) {
+  int value;
+  if(sscanf(string, "%d", &value) != 1)
+    return 0;
+  return value;
+}
+
+cmd parsecmd(char s[BUFSZ], int socket)
+{
+  cmd comando;
+
+  int value;
+  char *val = strtok(s, " ");
+  comando.type = convertToInt(val);
+  comando.sourceSocket = socket;
+  for(int i = 0; i < NUMERO_MAX_CONEXOES; i++)
+    comando.payload[i] = 0;
+
+  switch (comando.type) 
+  {
+    case REQ_ADD:
+      break;
+    case RES_ADD:
+      comando.payload[0] = convertToInt(val);
+      break;
+    case RES_LIST:
+      int payloadIndex = 0;
+      for(int i = 0; i < NUMERO_MAX_CONEXOES; i++) {
+        val = strtok(NULL, " ");
+        if(val == NULL)
+          break;
+
+        comando.payload[payloadIndex] = convertToInt(val);
+        payloadIndex++;
+      }
+      break;
+
+    default:
+      logexit("tipo de comando desconhecido");
+  }
+
+  return comando;
 }
 
 #endif

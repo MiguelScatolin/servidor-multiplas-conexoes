@@ -7,12 +7,54 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
+int equipments[NUMERO_MAX_CONEXOES] = {0};
+
 int getcmd(char *buf, int nbuf)
 {
   memset(buf, 0, nbuf);
   fgets(buf, nbuf, stdin);
   return 0;
 };
+
+void successfullAdd(cmd comando) {
+  printf("New ID: %02d \n", comando.payload[0]);
+}
+
+void printEquipiments() {
+  printf("Equipments:");
+  for(int i = 0; i < NUMERO_MAX_CONEXOES; i++) {
+    if(equipments[i])
+      printf(" %02d", equipments[i]);
+  }
+  printf("\n");
+}
+
+void receiveEquipmentList(cmd comando) {
+  int equipmentListIndex = 0;
+  for(int i = 0; i < NUMERO_MAX_CONEXOES; i++) {
+    if(comando.payload[i] != 0) {
+      equipments[equipmentListIndex] = comando.payload[i];
+      equipmentListIndex++;
+    }
+  }
+  printEquipiments();
+}
+
+void runcmd(cmd comando)
+{
+  switch (comando.type) 
+  {
+    case RES_ADD:
+      successfullAdd(comando);
+      break;
+    case RES_LIST:
+      receiveEquipmentList(comando);
+      break;
+    
+    default:
+      logexit("tipo de comando desconhecido");
+  }
+}
 
 int main(int argc, char *argv[]) {
   if (argc < 3)
@@ -31,14 +73,20 @@ int main(int argc, char *argv[]) {
   if(0 != connect(s, address, sizeof(storage)))
     logexit("falha ao conectar");
 
-  static char buf[100];
+  sendMessage(s, "01");
   char receiveBuf[BUFSZ];
+
+  receiveMessage(s, receiveBuf);
+  runcmd(parsecmd(receiveBuf, s));
+
+  receiveMessage(s, receiveBuf);
+  runcmd(parsecmd(receiveBuf, s));
+
+  static char buf[100];
 	memset(receiveBuf, 0, BUFSZ);
   while(getcmd(buf, sizeof(buf)) >= 0) {
     sendMessage(s, buf);
-    if(stringEqual(buf, "exit") || stringEqual(buf, "exit\n"))
-      break;
-    recv(s, receiveBuf, BUFSZ - 1, 0);
+    receiveMessage(s, receiveBuf);
     printf("%s\n", receiveBuf);
   }
 
