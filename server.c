@@ -9,8 +9,15 @@ int equipmentPorts[NUMERO_MAX_CONEXOES] = {0};
 int currentConnections = 0;
 int clientSocket, serverSocket;
 
+void sendMessageToAllEquipments(char *message) {
+  for(int i = 0; i < NUMERO_MAX_CONEXOES; i++) {
+    if(equipmentPorts[i])
+      sendMessage(equipmentPorts[i], message);
+  }
+}
+
 int indexToId(int index) {
-  
+  return index + 1;
 }
 
 int idToIndex(int id) {
@@ -41,13 +48,12 @@ void installEquipment(message message) {
   
   char equipmentAddedMessage[50];
   sprintf(equipmentAddedMessage, "%02d %02d", RES_ADD, newEquipmentId);
-  sendMessage(clientSocket, equipmentAddedMessage);
+  sendMessageToAllEquipments(equipmentAddedMessage);
 
   printf("Equipment %02d added\n", newEquipmentId);
 
   for(int i = 0; i < 100000000; i++);
 
-  //todo: fazer isso ser broadcast
   char equipmentListMessage[50];
   //todo: fazer isso pegar a lista completa
   sprintf(equipmentListMessage, "%02d %02d", RES_LIST, newEquipmentId);
@@ -73,6 +79,10 @@ void removeEquipment(message message) {
   printf("Equipment %02d removed\n", message.sourceId);
 
   //fechar conexao
+
+  char equipmentRemovedMessage[50];
+  sprintf(equipmentRemovedMessage, "%02d %02d", REQ_RM, message.sourceId);
+  sendMessageToAllEquipments(equipmentRemovedMessage);
 }
 
 void runcmd(message message)
@@ -150,7 +160,7 @@ int main(int argc, char *argv[]) {
 
   char *port = argv[1];
 
-  clientSocket = connectToClient("v4", port);
+  clientSocket = connectToClient(port);
   if(clientSocket == -1)
     logexit("accept");
 
