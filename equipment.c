@@ -6,6 +6,9 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <time.h>
+
+#define MAX_TEMPERATURE 1000
 
 int serverSocket;
 int myId;
@@ -49,6 +52,41 @@ void successfulClose(message message) {
   exit(EXIT_SUCCESS);
 }
 
+void handleError(message message) {
+  switch (message.payload[0])
+  {
+    case EQUIPMENT_NOT_FOUND:
+      printf("Equipment not found\n");
+      break;
+    case SOURCE_EQUIPMENT_NOT_FOUND:
+      printf("Source equipment not found\n");
+      break;
+    case TARGET_EQUIPMENT_NOT_FOUND:
+      printf("Target equipment not found\n");
+      break;
+    case EQUIPMENT_LIMIT_EXCEEDED:
+      printf("Equipment limit exceeded\n");
+      break;
+    default:
+      logexit("tipo de erro desconhecido");
+  }
+}
+
+float getRandomInformation() {
+  return (rand() % MAX_TEMPERATURE) / 100;
+}
+
+void respondInformation(message message) {
+  printf("requested information");
+  char respondInformationMessage[50];
+  sprintf(respondInformationMessage, "%02d %02d %02d %.2f", RES_INF, message.destinationId, message.sourceId, getRandomInformation());
+  sendMessage(serverSocket, respondInformationMessage);
+}
+
+void receiveInformation(message message) {
+  printf("Value from IdEQ %02d : %d", message.sourceId, message.payload[0]);
+}
+
 void runcmd(message message)
 {
   switch (message.type) 
@@ -61,6 +99,15 @@ void runcmd(message message)
       break;
     case OK:
       successfulClose(message);
+      break;
+    case ERROR:
+      handleError(message);
+      break;
+    case REQ_INF:
+      respondInformation(message);
+      break;
+    case RES_INF:
+      receiveInformation(message);
       break;
     
     default:
@@ -92,6 +139,7 @@ void runTerminalCommand(char *command) {
 }
 
 int main(int argc, char *argv[]) {
+  srand(time(NULL));
   if (argc < 3)
     logexit("parametros nao informados");
 

@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-#include <time.h>
 
 int equipmentPorts[NUMERO_MAX_CONEXOES] = {0};
 int currentConnections = 0;
@@ -22,6 +21,14 @@ int indexToId(int index) {
 
 int idToIndex(int id) {
   return id - 1;
+}
+
+int isEquipmentInstalled(int equipmentId) {
+  return equipmentPorts[idToIndex(equipmentId)] != 0;
+}
+
+int getEquipmentSocket(int equipmentId) {
+  return equipmentPorts[idToIndex(equipmentId)];
 }
 
 void terminateConnection() {
@@ -61,10 +68,10 @@ void installEquipment(message message) {
 }
 
 void removeEquipment(message message) {
-  if(equipmentPorts[idToIndex(message.sourceId)] == 0) {
+  if(!isEquipmentInstalled(message.sourceId)) {
     char errorMessage[50];
     sprintf(errorMessage, "%02d %02d", ERROR, EQUIPMENT_NOT_FOUND);
-    sendMessage(errorMessage, errorMessage);
+    sendMessage(message.sourceId, errorMessage);
     return;
   }
 
@@ -85,6 +92,50 @@ void removeEquipment(message message) {
   sendMessageToAllEquipments(equipmentRemovedMessage);
 }
 
+void requestInformation(message message) {
+  if(!isEquipmentInstalled(message.sourceId)) {
+    printf("Equipment IdEQ %02d not found\n", message.sourceId);
+    char sourceNotFoundErrorMessage[50];
+    sprintf(sourceNotFoundErrorMessage, "%02d %02d", ERROR, SOURCE_EQUIPMENT_NOT_FOUND);
+    sendMessage(message.sourceId, sourceNotFoundErrorMessage);
+    return;
+  }
+
+  if(!isEquipmentInstalled(message.destinationId)) {
+    printf("Equipment IdEQ %02d not found\n", message.destinationId);
+    char targetNotFoundErrorMessage[50];
+    sprintf(targetNotFoundErrorMessage, "%02d %02d", ERROR, TARGET_EQUIPMENT_NOT_FOUND);
+    sendMessage(message.sourceId, targetNotFoundErrorMessage);
+    return;
+  }
+
+  char requestInformationMessage[50];
+  sprintf(requestInformationMessage, "%02d %02d %02d", REQ_INF, message.sourceId, message.destinationId);
+  sendMessage(message.destinationId, requestInformationMessage);
+}
+
+void respondInformation(message message) {
+  if(!isEquipmentInstalled(message.sourceId)) {
+    printf("Equipment IdEQ %02d not found\n", message.sourceId);
+    char sourceNotFoundErrorMessage[50];
+    sprintf(sourceNotFoundErrorMessage, "%02d %02d", ERROR, SOURCE_EQUIPMENT_NOT_FOUND);
+    sendMessage(message.sourceId, sourceNotFoundErrorMessage);
+    return;
+  }
+
+  if(!isEquipmentInstalled(message.destinationId)) {
+    printf("Equipment IdEQ %02d not found\n", message.destinationId);
+    char targetNotFoundErrorMessage[50];
+    sprintf(targetNotFoundErrorMessage, "%02d %02d", ERROR, TARGET_EQUIPMENT_NOT_FOUND);
+    sendMessage(message.sourceId, targetNotFoundErrorMessage);
+    return;
+  }
+
+  char respondInformationMessage[50];
+  sprintf(respondInformationMessage, "%02d %02d %02d %.2f", RES_INF, message.sourceId, message.destinationId, message.payload[0]);
+  sendMessage(message.destinationId, respondInformationMessage);
+}
+
 void runcmd(message message)
 {
   switch (message.type) 
@@ -94,6 +145,12 @@ void runcmd(message message)
       break;
     case REQ_RM:
       removeEquipment(message);
+      break;
+    case REQ_INF:
+      requestInformation(message);
+      break;
+    case RES_INF:
+      respondInformation(message);
       break;
     
     default:
@@ -154,7 +211,6 @@ int connectToClient(char *portString) {
 }
 
 int main(int argc, char *argv[]) {
-  srand(time(NULL));
   if (argc < 2) 
     logexit("parametros nao informados");
 

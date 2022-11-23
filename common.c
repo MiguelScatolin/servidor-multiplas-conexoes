@@ -119,6 +119,13 @@ int convertToInt(char *string) {
   return value;
 }
 
+float convertToFloat(char *string) {
+  int value;
+  if(sscanf(string, "%f", &value) != 1)
+    return 0;
+  return value;
+}
+
 message parseMessage(char s[BUFSZ], int socket)
 {
   message comando;
@@ -160,6 +167,7 @@ message parseMessage(char s[BUFSZ], int socket)
       break;
 
     case OK:
+    case ERROR:
       val = strtok(NULL, " ");
       if(val == NULL)
           logexit("missing idEQ j");
@@ -169,6 +177,35 @@ message parseMessage(char s[BUFSZ], int socket)
       if(val == NULL)
           logexit("missing code");
       comando.payload[0] = convertToInt(val);
+      break;
+
+    case REQ_INF:
+      val = strtok(NULL, " ");
+      if(val == NULL)
+          logexit("missing idEQ i");
+      comando.sourceId = convertToInt(val);
+
+      val = strtok(NULL, " ");
+      if(val == NULL)
+          logexit("missing idEQ j");
+      comando.destinationId = convertToInt(val);
+      break;
+
+    case RES_INF:
+      val = strtok(NULL, " ");
+      if(val == NULL)
+          logexit("missing idEQ i");
+      comando.sourceId = convertToInt(val);
+
+      val = strtok(NULL, " ");
+      if(val == NULL)
+          logexit("missing idEQ j");
+      comando.destinationId = convertToInt(val);
+
+      val = strtok(NULL, " ");
+      if(val == NULL)
+          logexit("missing payload");
+      comando.temperature = convertToFloat(val);
       break;
 
     default:

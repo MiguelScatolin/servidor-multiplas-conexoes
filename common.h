@@ -36,6 +36,7 @@ typedef struct message {
   int destinationId;
   int sourceSocket;
   int payload[NUMERO_MAX_CONEXOES];
+  float temperature;
 } message;
 
 void sendMessage(int s, char *message);
