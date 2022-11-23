@@ -22,30 +22,6 @@ void receiveMessage(int s, char *buf) {
   printf("message received: %s\n", buf);
 }
 
-char *addressToString(const struct sockaddr *address) {
-  int version;
-  char addressString[INET6_ADDRSTRLEN + 1] = "";
-  uint16_t port;
-  if(address->sa_family == AF_INET) {
-    version = 4;
-    struct sockaddr_in *addr4 = (struct sockaddr_in *)address;
-    if(!inet_ntop(AF_INET, &(addr4->sin_addr), addressString, INET6_ADDRSTRLEN + 1))
-      logexit("ntop");
-    port = ntohs(addr4->sin_port);
-  } else if(address->sa_family == AF_INET6) {
-    version = 6;
-    struct sockaddr_in6 *addr6 = (struct sockaddr_in6 *)address;
-    if(!inet_ntop(AF_INET, &(addr6->sin6_addr), addressString, INET6_ADDRSTRLEN + 1))
-      logexit("ntop");
-    port = ntohs(addr6->sin6_port);
-  } else 
-    logexit("familia invalida");
-
-  char *string;
-  snprintf(string, 100, "IPv %d %s %d", version, addressString, port);
-  return string;
-}
-
 struct sockaddr_storage parseAddress(char *ipAdressString, char *portString) {
   if(ipAdressString == NULL)
     logexit("ip address nulo");
@@ -81,35 +57,6 @@ struct sockaddr_storage parseAddress(char *ipAdressString, char *portString) {
 
 bool stringEqual(char *s1, char *s2) {
   return strcmp(s1, s2) == 0;
-}
-
-void addrtostr(const struct sockaddr *addr, char *str, size_t strsize) {
-    int version;
-    char addrstr[INET6_ADDRSTRLEN + 1] = "";
-    uint16_t port;
-
-    if (addr->sa_family == AF_INET) {
-        version = 4;
-        struct sockaddr_in *addr4 = (struct sockaddr_in *)addr;
-        if (!inet_ntop(AF_INET, &(addr4->sin_addr), addrstr,
-                       INET6_ADDRSTRLEN + 1)) {
-            logexit("ntop");
-        }
-        port = ntohs(addr4->sin_port); // network to host short
-    } else if (addr->sa_family == AF_INET6) {
-        version = 6;
-        struct sockaddr_in6 *addr6 = (struct sockaddr_in6 *)addr;
-        if (!inet_ntop(AF_INET6, &(addr6->sin6_addr), addrstr,
-                       INET6_ADDRSTRLEN + 1)) {
-            logexit("ntop");
-        }
-        port = ntohs(addr6->sin6_port); // network to host short
-    } else {
-        logexit("unknown protocol family.");
-    }
-    if (str) {
-        snprintf(str, strsize, "IPv%d %s %hu", version, addrstr, port);
-    }
 }
 
 int convertToInt(char *string) {

@@ -41,10 +41,9 @@ typedef struct message {
 
 void sendMessage(int s, char *message);
 void receiveMessage(int s, char *buf);
-char *addressToString(const struct sockaddr *address);
-void addrtostr(const struct sockaddr *addr, char *str, size_t strsize);
 struct sockaddr_storage parseAddress(char *ipAdress, char *port);
 void logexit(char *errorMessage);
 bool stringEqual(char *s1, char *s2);
 int convertToInt(char *string);
+float convertToFloat(char *string);
 message parseMessage(char s[BUFSZ], int socket);

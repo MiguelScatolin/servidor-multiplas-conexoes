@@ -1,12 +1,18 @@
 #include "common.h"
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <string.h>
+#include <unistd.h>
 
 int equipmentPorts[NUMERO_MAX_CONEXOES] = {0};
 int currentConnections = 0;
-int clientSocket, serverSocket;
+int serverSocket;
+
+struct client_data {
+    int clientSocket;
+    struct sockaddr_storage storage;
+};
 
 void sendMessageToAllEquipments(char *message) {
   for(int i = 0; i < NUMERO_MAX_CONEXOES; i++) {
@@ -31,16 +37,16 @@ int getEquipmentSocket(int equipmentId) {
   return equipmentPorts[idToIndex(equipmentId)];
 }
 
-void terminateConnection() {
-  close(clientSocket);
-  exit(EXIT_SUCCESS);
+void terminateConnection(int socket) {
+  close(socket);
+  pthread_exit(EXIT_SUCCESS);
 }
 
 void installEquipment(message message) {
   if(currentConnections >= NUMERO_MAX_CONEXOES) {
     char errorMessage[50];
     sprintf(errorMessage, "%02d %02d", ERROR, EQUIPMENT_LIMIT_EXCEEDED);
-    sendMessage(errorMessage, errorMessage);
+    sendMessage(message.sourceSocket, errorMessage);
     return;
   }
 
@@ -64,7 +70,7 @@ void installEquipment(message message) {
   char equipmentListMessage[50];
   //todo: fazer isso pegar a lista completa
   sprintf(equipmentListMessage, "%02d %02d", RES_LIST, newEquipmentId);
-  sendMessage(clientSocket, equipmentListMessage);
+  sendMessage(message.sourceSocket, equipmentListMessage);
 }
 
 void removeEquipment(message message) {
@@ -81,11 +87,11 @@ void removeEquipment(message message) {
 
   char okMessage[50];
   sprintf(okMessage, "%02d %02d %02d", OK, message.sourceId, 1);
-  sendMessage(clientSocket, okMessage);
+  sendMessage(message.sourceSocket, okMessage);
 
   printf("Equipment %02d removed\n", message.sourceId);
 
-  //fechar conexao
+  terminateConnection(message.sourceSocket);
 
   char equipmentRemovedMessage[50];
   sprintf(equipmentRemovedMessage, "%02d %02d", REQ_RM, message.sourceId);
@@ -173,7 +179,27 @@ int server_sockaddr_init(const char *portstr, struct sockaddr_storage *storage) 
     return 0;
 }
 
-int connectToClient(char *portString) {
+void * client_thread(void *data) {
+    struct client_data *clientData = (struct client_data *)data;
+    struct sockaddr *caddr = (struct sockaddr *)(&clientData->storage);
+
+    char buf[BUFSZ];
+    memset(buf, 0, BUFSZ);
+    while(1) {
+      receiveMessage(clientData->clientSocket, buf);
+      runcmd(parseMessage(buf, clientData->clientSocket));
+    }
+
+    close(clientData->clientSocket);
+    pthread_exit(EXIT_SUCCESS);
+}
+
+int main(int argc, char *argv[]) {
+  if (argc < 2) 
+    logexit("parametros nao informados");
+
+  char *portString = argv[1];
+
   struct sockaddr_storage storage;
   if (0 != server_sockaddr_init(portString, &storage))
     logexit("falha ao conectar");
@@ -197,35 +223,25 @@ int connectToClient(char *portString) {
       logexit("listen");
   }
 
-  char adressString[BUFSZ];
-  addrtostr(addr, adressString, BUFSZ);
-
-  struct sockaddr_storage clientStorage;
-  struct sockaddr *clientAddress = (struct sockaddr *)(&clientAddress);
-  socklen_t caddrlen = sizeof(clientStorage);
-  
-  int clientSocket = accept(serverSocket, clientAddress, &caddrlen);
-  if (clientSocket == -1)
-    logexit("accept");
-  return clientSocket;
-}
-
-int main(int argc, char *argv[]) {
-  if (argc < 2) 
-    logexit("parametros nao informados");
-
-  char *port = argv[1];
-
-  clientSocket = connectToClient(port);
-  if(clientSocket == -1)
-    logexit("accept");
-
-  char buf[BUFSZ];
-	memset(buf, 0, BUFSZ);
   while(1) {
-    receiveMessage(clientSocket, buf);
-    runcmd(parseMessage(buf, clientSocket));
+    struct sockaddr_storage clientStorage;
+    struct sockaddr *clientAddress = (struct sockaddr *)(&clientAddress);
+    socklen_t caddrlen = sizeof(clientStorage);
+    
+    int clientSocket = accept(serverSocket, clientAddress, &caddrlen);
+    if (clientSocket == -1)
+      logexit("accept");
+    
+    struct client_data *clientData = malloc(sizeof(*clientData));
+    if (!clientData) {
+        logexit("malloc");
+    }
+    clientData->clientSocket = clientSocket;
+    memcpy(&(clientData->storage), &clientStorage, sizeof(clientStorage));
+
+    pthread_t tid;
+    pthread_create(&tid, NULL, client_thread, clientData);
   }
 
-  terminateConnection();
+  exit(EXIT_SUCCESS);
 }
