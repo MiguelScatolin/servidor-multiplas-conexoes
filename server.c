@@ -14,7 +14,7 @@ struct client_data {
     struct sockaddr_storage storage;
 };
 
-void sendMessageToAllEquipments(char *message) {
+void sendMessageToAllEquipment(char *message) {
   for(int i = 0; i < NUMERO_MAX_CONEXOES; i++) {
     if(equipmentPorts[i])
       sendMessage(equipmentPorts[i], message);
@@ -61,15 +61,21 @@ void installEquipment(message message) {
   
   char equipmentAddedMessage[50];
   sprintf(equipmentAddedMessage, "%02d %02d", RES_ADD, newEquipmentId);
-  sendMessageToAllEquipments(equipmentAddedMessage);
+  sendMessageToAllEquipment(equipmentAddedMessage);
 
   printf("Equipment %02d added\n", newEquipmentId);
 
   for(int i = 0; i < 100000000; i++);
 
   char equipmentListMessage[50];
-  //todo: fazer isso pegar a lista completa
-  sprintf(equipmentListMessage, "%02d %02d", RES_LIST, newEquipmentId);
+  sprintf(equipmentListMessage, "%02d", RES_LIST);
+  for(int i = 0; i < NUMERO_MAX_CONEXOES; i++) {
+    if(equipmentPorts[i] != 0) {
+      char equipmentId[4];
+      sprintf(equipmentId, " %02d", indexToId(i));
+      strcat(equipmentListMessage,equipmentId);
+    }
+  }
   sendMessage(message.sourceSocket, equipmentListMessage);
 }
 
@@ -91,11 +97,11 @@ void removeEquipment(message message) {
 
   printf("Equipment %02d removed\n", message.sourceId);
 
-  terminateConnection(message.sourceSocket);
-
   char equipmentRemovedMessage[50];
   sprintf(equipmentRemovedMessage, "%02d %02d", REQ_RM, message.sourceId);
-  sendMessageToAllEquipments(equipmentRemovedMessage);
+  sendMessageToAllEquipment(equipmentRemovedMessage);
+
+  terminateConnection(message.sourceSocket);
 }
 
 void requestInformation(message message) {
@@ -103,7 +109,7 @@ void requestInformation(message message) {
     printf("Equipment IdEQ %02d not found\n", message.sourceId);
     char sourceNotFoundErrorMessage[50];
     sprintf(sourceNotFoundErrorMessage, "%02d %02d", ERROR, SOURCE_EQUIPMENT_NOT_FOUND);
-    sendMessage(message.sourceId, sourceNotFoundErrorMessage);
+    sendMessage(getEquipmentSocket(message.sourceId), sourceNotFoundErrorMessage);
     return;
   }
 
@@ -111,13 +117,13 @@ void requestInformation(message message) {
     printf("Equipment IdEQ %02d not found\n", message.destinationId);
     char targetNotFoundErrorMessage[50];
     sprintf(targetNotFoundErrorMessage, "%02d %02d", ERROR, TARGET_EQUIPMENT_NOT_FOUND);
-    sendMessage(message.sourceId, targetNotFoundErrorMessage);
+    sendMessage(getEquipmentSocket(message.sourceId), targetNotFoundErrorMessage);
     return;
   }
 
   char requestInformationMessage[50];
   sprintf(requestInformationMessage, "%02d %02d %02d", REQ_INF, message.sourceId, message.destinationId);
-  sendMessage(message.destinationId, requestInformationMessage);
+  sendMessage(getEquipmentSocket(message.destinationId), requestInformationMessage);
 }
 
 void respondInformation(message message) {
@@ -125,7 +131,7 @@ void respondInformation(message message) {
     printf("Equipment IdEQ %02d not found\n", message.sourceId);
     char sourceNotFoundErrorMessage[50];
     sprintf(sourceNotFoundErrorMessage, "%02d %02d", ERROR, SOURCE_EQUIPMENT_NOT_FOUND);
-    sendMessage(message.sourceId, sourceNotFoundErrorMessage);
+    sendMessage(getEquipmentSocket(message.sourceId), sourceNotFoundErrorMessage);
     return;
   }
 
@@ -133,13 +139,13 @@ void respondInformation(message message) {
     printf("Equipment IdEQ %02d not found\n", message.destinationId);
     char targetNotFoundErrorMessage[50];
     sprintf(targetNotFoundErrorMessage, "%02d %02d", ERROR, TARGET_EQUIPMENT_NOT_FOUND);
-    sendMessage(message.sourceId, targetNotFoundErrorMessage);
+    sendMessage(getEquipmentSocket(message.sourceId), targetNotFoundErrorMessage);
     return;
   }
 
   char respondInformationMessage[50];
   sprintf(respondInformationMessage, "%02d %02d %02d %.2f", RES_INF, message.sourceId, message.destinationId, message.payload[0]);
-  sendMessage(message.destinationId, respondInformationMessage);
+  sendMessage(getEquipmentSocket(message.destinationId), respondInformationMessage);
 }
 
 void runcmd(message message)

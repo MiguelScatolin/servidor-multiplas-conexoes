@@ -1,4 +1,5 @@
 #include "common.h"
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -11,8 +12,8 @@
 #define MAX_TEMPERATURE 1000
 
 int serverSocket;
-int myId;
-int equipments[NUMERO_MAX_CONEXOES] = {0};
+int myId = 0;
+int equipment[NUMERO_MAX_CONEXOES] = {0};
 
 int getcmd(char *buf, int nbuf)
 {
@@ -22,15 +23,26 @@ int getcmd(char *buf, int nbuf)
 };
 
 void successfullAdd(message message) {
-  myId = message.payload[0];
-  printf("New ID: %02d \n", myId);
+  int newConnectedId = message.payload[0];
+  if(myId == 0) {
+    myId = newConnectedId;
+    printf("New ID: %02d \n", myId);
+  }
+  else {
+    for(int i = 0; i < NUMERO_MAX_CONEXOES; i++) {
+      if(equipment[i] == 0) {
+        equipment[i] = newConnectedId;
+        break;
+      }
+    }
+    printf("Equipment %02d added\n", newConnectedId);
+  }
 }
 
 void printEquipiments() {
-  printf("Equipments:");
   for(int i = 0; i < NUMERO_MAX_CONEXOES; i++) {
-    if(equipments[i])
-      printf(" %02d", equipments[i]);
+    if(equipment[i])
+      printf("%02d ", equipment[i]);
   }
   printf("\n");
 }
@@ -38,18 +50,29 @@ void printEquipiments() {
 void receiveEquipmentList(message message) {
   int equipmentListIndex = 0;
   for(int i = 0; i < NUMERO_MAX_CONEXOES; i++) {
-    if(message.payload[i] != 0) {
-      equipments[equipmentListIndex] = message.payload[i];
+    if(message.payload[i] != 0 && message.payload[i] != myId) {
+      equipment[equipmentListIndex] = message.payload[i];
       equipmentListIndex++;
     }
   }
-  printEquipiments();
+  //printEquipiments();
 }
 
 void successfulClose(message message) {
   printf("Success\n");
   close(serverSocket);
   exit(EXIT_SUCCESS);
+}
+
+void removeEquipment(message message) {
+  int removedEquipmentId = message.sourceId;
+  for(int i = 0; i < NUMERO_MAX_CONEXOES; i++) {
+    if(equipment[i] == removedEquipmentId) {
+      equipment[i] = 0;
+      break;
+    }
+  }
+  printf("Equipment %02d removed\n", removedEquipmentId);
 }
 
 void handleError(message message) {
@@ -77,20 +100,23 @@ float getRandomInformation() {
 }
 
 void respondInformation(message message) {
-  printf("requested information");
+  printf("requested information\n");
   char respondInformationMessage[50];
   sprintf(respondInformationMessage, "%02d %02d %02d %.2f", RES_INF, message.destinationId, message.sourceId, getRandomInformation());
   sendMessage(serverSocket, respondInformationMessage);
 }
 
 void receiveInformation(message message) {
-  printf("Value from IdEQ %02d : %d", message.sourceId, message.payload[0]);
+  printf("Value from IdEQ %02d : %d\n", message.sourceId, message.payload[0]);
 }
 
 void runcmd(message message)
 {
   switch (message.type) 
   {
+    case REQ_RM:
+      removeEquipment(message);
+      break;
     case RES_ADD:
       successfullAdd(message);
       break;
@@ -127,15 +153,30 @@ void runTerminalCommand(char *command) {
     runcmd(parseMessage(receiveBuf, serverSocket));
   }
   else if(stringEqual(val, "list")) {
-
+    printEquipiments();
   }
   else if(stringEqual(val, "request")) {
-    strtok(NULL, ' ');
-    strtok(NULL, ' ');
-    val = strtok(NULL, ' ');
+    strtok(NULL, " ");
+    strtok(NULL, " ");
+    val = strtok(NULL, " ");
+    if(val == NULL) {
+      return;
+      printf("missing idEQ i");
+    }
     int equipmentId = convertToInt(val);
-
+    char requestInformationMessage[50];
+    sprintf(requestInformationMessage, "%02d %02d %02d", REQ_INF, myId, equipmentId);
+    sendMessage(serverSocket, requestInformationMessage);
   }
+}
+
+void * messageHandler() {
+  char receiveBuf[BUFSZ];
+  while(1) {
+    receiveMessage(serverSocket, receiveBuf);
+    runcmd(parseMessage(receiveBuf, serverSocket));
+  }
+  pthread_exit(EXIT_SUCCESS);
 }
 
 int main(int argc, char *argv[]) {
@@ -165,6 +206,9 @@ int main(int argc, char *argv[]) {
   memset(receiveBuf, 0, BUFSZ);
   receiveMessage(serverSocket, receiveBuf);
   runcmd(parseMessage(receiveBuf, serverSocket));
+
+  pthread_t tid;
+  pthread_create(&tid, NULL, messageHandler, NULL);
 
   char buf[100];
   while(getcmd(buf, sizeof(buf)) >= 0) {
