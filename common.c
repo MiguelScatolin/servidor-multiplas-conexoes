@@ -11,7 +11,7 @@ void logexit(char *errorMessage) {
 }
 
 void sendMessage(int s, char *message) {
-  printf("message sent: %s\n", message);
+  //printf("[DEBUG] message sent: %s\n", message);
   size_t count = send(s, message, strlen(message)+1, 0);
 	if (count != strlen(message)+1)
 		logexit("send");
@@ -19,7 +19,7 @@ void sendMessage(int s, char *message) {
 
 void receiveMessage(int s, char *buf) {
   recv(s, buf, BUFSZ - 1, 0);
-  printf("message received: %s\n", buf);
+  //printf("[DEBUG] message received: %s\n", buf);
 }
 
 struct sockaddr_storage parseAddress(char *ipAdressString, char *portString) {
