@@ -114,7 +114,7 @@ void requestInformation(message message) {
   }
 
   if(!isEquipmentInstalled(message.destinationId)) {
-    printf("Equipment IdEQ %02d not found\n", message.destinationId);
+    printf("Equipment %02d not found\n", message.destinationId);
     char targetNotFoundErrorMessage[50];
     sprintf(targetNotFoundErrorMessage, "%02d %02d %02d", ERROR, message.sourceId, TARGET_EQUIPMENT_NOT_FOUND);
     sendMessage(getEquipmentSocket(message.sourceId), targetNotFoundErrorMessage);
@@ -128,7 +128,7 @@ void requestInformation(message message) {
 
 void respondInformation(message message) {
   if(!isEquipmentInstalled(message.sourceId)) {
-    printf("Equipment IdEQ %02d not found\n", message.sourceId);
+    printf("Equipment %02d not found\n", message.sourceId);
     char sourceNotFoundErrorMessage[50];
     sprintf(sourceNotFoundErrorMessage, "%02d %02d %02d", ERROR, message.sourceId, SOURCE_EQUIPMENT_NOT_FOUND);
     sendMessage(getEquipmentSocket(message.sourceId), sourceNotFoundErrorMessage);
@@ -136,7 +136,7 @@ void respondInformation(message message) {
   }
 
   if(!isEquipmentInstalled(message.destinationId)) {
-    printf("Equipment IdEQ %02d not found\n", message.destinationId);
+    printf("Equipment %02d not found\n", message.destinationId);
     char targetNotFoundErrorMessage[50];
     sprintf(targetNotFoundErrorMessage, "%02d %02d %02d", ERROR, message.sourceId, TARGET_EQUIPMENT_NOT_FOUND);
     sendMessage(getEquipmentSocket(message.sourceId), targetNotFoundErrorMessage);
