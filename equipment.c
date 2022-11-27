@@ -75,26 +75,6 @@ void removeEquipment(message message) {
   printf("Equipment %02d removed\n", removedEquipmentId);
 }
 
-void handleError(message message) {
-  switch (message.payload[0])
-  {
-    case EQUIPMENT_NOT_FOUND:
-      printf("Equipment not found\n");
-      break;
-    case SOURCE_EQUIPMENT_NOT_FOUND:
-      printf("Source equipment not found\n");
-      break;
-    case TARGET_EQUIPMENT_NOT_FOUND:
-      printf("Target equipment not found\n");
-      break;
-    case EQUIPMENT_LIMIT_EXCEEDED:
-      printf("Equipment limit exceeded\n");
-      break;
-    default:
-      logexit("tipo de erro desconhecido");
-  }
-}
-
 float getRandomInformation() {
   return (rand() % MAX_TEMPERATURE + 1) / (float) 100;
 }
@@ -127,7 +107,7 @@ void runcmd(message message)
       successfulClose(message);
       break;
     case ERROR:
-      handleError(message);
+      printError(message.payload[0]);
       break;
     case REQ_INF:
       respondInformation(message);

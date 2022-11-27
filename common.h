@@ -47,3 +47,4 @@ bool stringEqual(char *s1, char *s2);
 int convertToInt(char *string);
 float convertToFloat(char *string);
 message parseMessage(char s[BUFSZ], int socket);
+void printError(codigo_erro error);

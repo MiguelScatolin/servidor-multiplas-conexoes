@@ -159,4 +159,24 @@ message parseMessage(char s[BUFSZ], int socket)
   return comando;
 }
 
+void printError(codigo_erro error) {
+  switch (error)
+  {
+    case EQUIPMENT_NOT_FOUND:
+      printf("Equipment not found\n");
+      break;
+    case SOURCE_EQUIPMENT_NOT_FOUND:
+      printf("Source equipment not found\n");
+      break;
+    case TARGET_EQUIPMENT_NOT_FOUND:
+      printf("Target equipment not found\n");
+      break;
+    case EQUIPMENT_LIMIT_EXCEEDED:
+      printf("Equipment limit exceeded\n");
+      break;
+    default:
+      logexit("tipo de erro desconhecido");
+  }
+}
+
 #endif
