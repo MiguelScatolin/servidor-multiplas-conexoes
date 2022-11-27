@@ -96,7 +96,7 @@ void handleError(message message) {
 }
 
 float getRandomInformation() {
-  return (rand() % MAX_TEMPERATURE) / 100;
+  return (rand() % MAX_TEMPERATURE + 1) / (float) 100;
 }
 
 void respondInformation(message message) {
@@ -107,7 +107,7 @@ void respondInformation(message message) {
 }
 
 void receiveInformation(message message) {
-  printf("Value from IdEQ %02d : %d\n", message.sourceId, message.payload[0]);
+  printf("Value from %02d: %.2f\n", message.sourceId, message.temperature);
 }
 
 void runcmd(message message)

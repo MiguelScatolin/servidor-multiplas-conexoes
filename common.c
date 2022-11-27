@@ -67,10 +67,7 @@ int convertToInt(char *string) {
 }
 
 float convertToFloat(char *string) {
-  int value;
-  if(sscanf(string, "%f", &value) != 1)
-    return 0;
-  return value;
+  return strtof(string, NULL);
 }
 
 message parseMessage(char s[BUFSZ], int socket)
