@@ -109,7 +109,7 @@ void requestInformation(message message) {
     printf("Equipment %02d not found\n", message.sourceId);
     char sourceNotFoundErrorMessage[50];
     sprintf(sourceNotFoundErrorMessage, "%02d %02d %02d", ERROR, message.sourceId, SOURCE_EQUIPMENT_NOT_FOUND);
-    sendMessage(getEquipmentSocket(message.sourceId), sourceNotFoundErrorMessage);
+    sendMessage(message.sourceSocket, sourceNotFoundErrorMessage);
     return;
   }
 
@@ -117,7 +117,7 @@ void requestInformation(message message) {
     printf("Equipment %02d not found\n", message.destinationId);
     char targetNotFoundErrorMessage[50];
     sprintf(targetNotFoundErrorMessage, "%02d %02d %02d", ERROR, message.sourceId, TARGET_EQUIPMENT_NOT_FOUND);
-    sendMessage(getEquipmentSocket(message.sourceId), targetNotFoundErrorMessage);
+    sendMessage(message.sourceSocket, targetNotFoundErrorMessage);
     return;
   }
 
@@ -131,7 +131,7 @@ void respondInformation(message message) {
     printf("Equipment %02d not found\n", message.sourceId);
     char sourceNotFoundErrorMessage[50];
     sprintf(sourceNotFoundErrorMessage, "%02d %02d %02d", ERROR, message.sourceId, SOURCE_EQUIPMENT_NOT_FOUND);
-    sendMessage(getEquipmentSocket(message.sourceId), sourceNotFoundErrorMessage);
+    sendMessage(message.sourceSocket, sourceNotFoundErrorMessage);
     return;
   }
 
@@ -139,7 +139,7 @@ void respondInformation(message message) {
     printf("Equipment %02d not found\n", message.destinationId);
     char targetNotFoundErrorMessage[50];
     sprintf(targetNotFoundErrorMessage, "%02d %02d %02d", ERROR, message.sourceId, TARGET_EQUIPMENT_NOT_FOUND);
-    sendMessage(getEquipmentSocket(message.sourceId), targetNotFoundErrorMessage);
+    sendMessage(message.sourceSocket, targetNotFoundErrorMessage);
     return;
   }
 
